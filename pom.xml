@@ -9,6 +9,7 @@
   	<module>dbusjava</module>
   	<module>ev3classes</module>
   	<module>fonso</module>
+  	<module>robot</module>
   </modules>
   
   <build>

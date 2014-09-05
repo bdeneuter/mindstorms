@@ -1,13 +1,14 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
-  <parent>
-    <groupId>org.osito.mindstorms</groupId>
-    <artifactId>mindstorms</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
-  </parent>
-  <artifactId>fonso</artifactId>
-  
-  	<properties>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>org.osito.mindstorms</groupId>
+		<artifactId>mindstorms</artifactId>
+		<version>0.0.1-SNAPSHOT</version>
+	</parent>
+	<artifactId>fonso</artifactId>
+
+	<properties>
 		<brick.host>10.0.1.1</brick.host>
 		<brick.home>/home/lejos/programs</brick.home>
 		<brick.user>root</brick.user>
@@ -15,9 +16,9 @@
 	</properties>
 	<dependencies>
 		<dependency>
-			<groupId>com.netflix.rxjava</groupId>
-			<artifactId>rxjava-core</artifactId>
-			<version>0.20.3</version>
+			<groupId>org.osito.mindstorms</groupId>
+			<artifactId>robot</artifactId>
+			<version>${project.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>lejos</groupId>
@@ -54,8 +55,8 @@
 						</manifestEntries>
 					</archive>
 					<appendAssemblyId>false</appendAssemblyId>
-        			<finalName>${final.name}</finalName>
-        			<descriptorRefs>
+					<finalName>${final.name}</finalName>
+					<descriptorRefs>
 						<descriptorRef>jar-with-dependencies</descriptorRef>
 					</descriptorRefs>
 				</configuration>
@@ -127,5 +128,5 @@
 			</plugin>
 		</plugins>
 	</build>
-  
+
 </project>

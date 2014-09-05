@@ -1,18 +1,24 @@
 package org.osito.fonso;
 
-import static rx.Observable.create;
-import lejos.hardware.BrickFinder;
-import lejos.hardware.lcd.GraphicsLCD;
-import rx.Observable;
-import rx.Subscriber;
+import static org.osito.mindstorms.robot.BeanProvider.irSensor;
+import static org.osito.mindstorms.robot.hardware.Port.S1;
+import lejos.hardware.Button;
+
+import org.osito.mindstorms.robot.Application;
 
 public class Fonso {
-
 	public static void main(String[] args) {
-		GraphicsLCD lcd = BrickFinder.getDefault().getGraphicsLCD();
-		System.out.println("Hello");
-		Observable<String> observable = create((Subscriber<? super String> e) -> System.out.println(e));
-		System.out.println(observable);
+		new Application().start(() -> {
+			
+			irSensor(S1).distance()
+						.filter((e) -> e < 10)
+						.subscribe((e) -> Button.LEDPattern(3));
+			
+			irSensor(S1).distance()
+						.filter((e) -> e >= 10)
+						.subscribe((e) -> Button.LEDPattern(1));
+			
+		});
 	}
 
 }
