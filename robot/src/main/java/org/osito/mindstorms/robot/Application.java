@@ -2,19 +2,22 @@ package org.osito.mindstorms.robot;
 
 import static org.osito.mindstorms.robot.BeanProvider.button;
 import static org.osito.mindstorms.robot.hardware.ButtonType.ESCAPE;
+import static org.osito.mindstorms.robot.hardware.KeyEvent.RELEASED;
+import lejos.hardware.Button;
 
 public class Application {
 
-	private boolean keepRunning = true;
-	
 	public final void start(Runnable runnable) {
-		button(ESCAPE).keyEvents().subscribe((e) -> keepRunning = false);
+		button(ESCAPE).keyEvents()
+					  .filter((e) -> e == RELEASED)
+					  .subscribe((e) -> System.exit(0));
+		Button.LEDPattern(1);
 		runnable.run();
 		keepAlive();
 	}
 
 	private void keepAlive() {
-		while (keepRunning) {
+		while (true) {
 			try {
 				Thread.sleep(1000);
 			} catch (InterruptedException e) {
@@ -22,7 +25,6 @@ public class Application {
 				System.exit(1);
 			}
 		}
-		System.exit(0);
 	}
 
 	

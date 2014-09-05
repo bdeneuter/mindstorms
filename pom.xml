@@ -10,6 +10,7 @@
   	<module>ev3classes</module>
   	<module>fonso</module>
   	<module>robot</module>
+  	<module>gripper</module>
   </modules>
   
   <build>
