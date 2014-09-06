@@ -25,7 +25,7 @@ public class Avoid implements State {
 			.delaySubscription(1, SECONDS) // Let it turn a little more away
 			.subscribe((e) -> {
 				body.leftTire().stop();
-				brain.setState(new MoveForward());
+				brain.setState(new MoveForward(), new Scan());
 			});
 	}
 	

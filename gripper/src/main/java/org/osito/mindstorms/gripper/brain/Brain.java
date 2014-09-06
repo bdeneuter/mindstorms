@@ -14,6 +14,10 @@ public class Brain {
 		state = new Start();
 	}
 
+	public void setState(State... states) {
+		setState(new CompositeState(states));
+	}
+	
 	public void setState(State state) {
 		this.state.stop();
 		this.state = state;

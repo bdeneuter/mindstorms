@@ -19,7 +19,7 @@ public class Stop implements State {
 		body.leftTire().stop();
 		subscription = button(ENTER).keyEvents()
 									.filter((e) -> e == RELEASED)
-									.subscribe((e) -> brain.setState(new MoveForward()));
+									.subscribe((e) -> brain.setState(new MoveForward(), new Scan()));
 	}
 
 	@Override

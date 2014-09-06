@@ -40,4 +40,9 @@ public class Body {
 		rightTire().moveForward();
 	}
 
+	public void stop() {
+		leftTire.stop();
+		rightTire.stop();
+	}
+
 }
