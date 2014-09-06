@@ -2,14 +2,14 @@ package org.osito.mindstorms.robot.hardware;
 
 import static org.osito.mindstorms.robot.hardware.KeyEvent.PRESSED;
 import static org.osito.mindstorms.robot.hardware.KeyEvent.RELEASED;
+import lejos.hardware.Key;
+import lejos.hardware.KeyListener;
 import rx.Observable;
 import rx.subjects.PublishSubject;
 import rx.subjects.Subject;
-import lejos.hardware.Key;
-import lejos.hardware.KeyListener;
 
 public class Button {
-
+	
 	private Key key;
 	private Subject<KeyEvent, KeyEvent> subject = PublishSubject.create();
 	

@@ -1,4 +1,4 @@
-package org.osito.mindstorms.gripper;
+package org.osito.mindstorms.gripper.body;
 
 public enum Action {
 

@@ -1,4 +1,4 @@
-package org.osito.mindstorms.gripper;
+package org.osito.mindstorms.gripper.body;
 
 import static org.osito.mindstorms.robot.BeanProvider.irSensor;
 import static org.osito.mindstorms.robot.hardware.Port.S4;

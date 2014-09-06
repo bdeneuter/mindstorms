@@ -21,8 +21,8 @@ public class TouchSensor {
 		executor.execute(() -> sample(sensorMode, sample, executor));
 	}
 	
-	public Observable<Float> touch() {
-		return subject.filter((e) -> e == 1);
+	public Observable<Boolean> touch() {
+		return subject.map((e) -> e == 1);
 	}
 	
 }
