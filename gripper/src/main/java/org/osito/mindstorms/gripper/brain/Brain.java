@@ -19,6 +19,7 @@ public class Brain {
 	}
 	
 	public void setState(State state) {
+		System.out.println("Set state: " + state.getClass().getSimpleName());
 		this.state.stop();
 		this.state = state;
 		this.state.start(body, this);

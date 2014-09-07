@@ -14,9 +14,8 @@ public class Scan implements State {
 
 	@Override
 	public void start(Body body, Brain brain) {
-		subscription = colorSensor(S1).ambient()
-						.doOnEach((e) -> System.out.println("Light: " + e))
-						.filter((e) -> e < 0.01)
+		subscription = colorSensor(S1).red()
+						.filter((e) -> e > 0)
 						.first()
 						.subscribe((e) -> grab(body, brain));
 	}

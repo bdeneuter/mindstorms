@@ -20,6 +20,8 @@ public class Tire {
 	}
 	
 	public void stop() {
-		motor.stop();
+		if (motor.isMoving()) {
+			motor.stop();			
+		}
 	}
 }
