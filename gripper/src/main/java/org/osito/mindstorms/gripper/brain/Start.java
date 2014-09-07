@@ -9,7 +9,7 @@ public class Start implements State {
 		body.hands().open();
 		body.hands().close();
 		body.hands().open();
-		brain.setState(new MoveForward());
+		brain.setState(new MoveForward(), new Scan());
 	}
 
 	@Override

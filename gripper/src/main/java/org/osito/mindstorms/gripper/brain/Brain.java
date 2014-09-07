@@ -4,7 +4,7 @@ import org.osito.mindstorms.gripper.body.Body;
 
 public class Brain {
 
-	public static final int DISTANCE_THRESHOLD = 30;
+	public static final int DISTANCE_THRESHOLD = 50;
 	
 	private State state;
 	private Body body;

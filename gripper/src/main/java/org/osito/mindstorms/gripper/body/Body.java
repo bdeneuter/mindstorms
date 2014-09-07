@@ -35,6 +35,16 @@ public class Body {
 		return hands;
 	}
 
+	public void turnRight() {
+		rightTire().stop();
+		leftTire().moveForward();
+	}
+	
+	public void turnLeft() {
+		rightTire().moveForward();
+		leftTire().stop();
+	}
+	
 	public void moveForward() {
 		leftTire().moveForward();
 		rightTire().moveForward();

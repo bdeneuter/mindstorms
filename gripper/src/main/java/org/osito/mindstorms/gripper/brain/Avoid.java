@@ -4,6 +4,8 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.osito.mindstorms.gripper.brain.Brain.DISTANCE_THRESHOLD;
 import static rx.subscriptions.Subscriptions.empty;
 
+import java.util.Random;
+
 import org.osito.mindstorms.gripper.body.Body;
 
 import rx.Subscription;
@@ -11,13 +13,18 @@ import rx.Subscription;
 
 public class Avoid implements State {
 	
+	private static final Random RANDOM = new Random();
+	
 	private Subscription subscription = empty();
 
 	@Override
 	public void start(Body body, Brain brain) {
 		
-		body.rightTire().stop();
-		body.leftTire().moveForward();
+		if (needToTurnRight()) {
+			body.turnRight();
+		} else {
+			body.turnLeft();
+		}
 
 		subscription = body.head().distance()
 			.filter((e) -> e > DISTANCE_THRESHOLD)
@@ -27,6 +34,10 @@ public class Avoid implements State {
 				body.leftTire().stop();
 				brain.setState(new MoveForward(), new Scan());
 			});
+	}
+	
+	private boolean needToTurnRight() {
+		return RANDOM.nextBoolean();
 	}
 	
 	@Override

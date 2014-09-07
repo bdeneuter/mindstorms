@@ -1,13 +1,14 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
-  <parent>
-    <groupId>org.osito.mindstorms</groupId>
-    <artifactId>mindstorms</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
-  </parent>
-  <artifactId>gripper</artifactId>
-  
-  	<properties>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>org.osito.mindstorms</groupId>
+		<artifactId>mindstorms</artifactId>
+		<version>0.0.1-SNAPSHOT</version>
+	</parent>
+	<artifactId>gripper</artifactId>
+
+	<properties>
 		<brick.host>10.0.1.1</brick.host>
 		<brick.home>/home/lejos/programs</brick.home>
 		<brick.user>root</brick.user>
@@ -19,6 +20,10 @@
 			<groupId>org.osito.mindstorms</groupId>
 			<artifactId>robot</artifactId>
 			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>lejos</groupId>
@@ -128,5 +133,5 @@
 			</plugin>
 		</plugins>
 	</build>
-  
+
 </project>

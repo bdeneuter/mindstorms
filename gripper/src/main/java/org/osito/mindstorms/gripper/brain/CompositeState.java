@@ -1,5 +1,6 @@
 package org.osito.mindstorms.gripper.brain;
 
+import static com.google.common.base.MoreObjects.toStringHelper;
 import static java.util.Arrays.asList;
 
 import java.util.Arrays;
@@ -31,6 +32,11 @@ public class CompositeState implements State {
 	@Override
 	public void stop() {
 		states.stream().forEachOrdered((e) -> e.stop());
+	}
+	
+	@Override
+	public String toString() {
+		return toStringHelper(this).addValue(states).toString();
 	}
 
 }
