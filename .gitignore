@@ -6,3 +6,4 @@ release.properties
 .settings
 .classpath
 .project
+build/

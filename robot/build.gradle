@@ -1,0 +1,4 @@
+dependencies {
+    compile group: 'com.netflix.rxjava', name: 'rxjava-core', version:'0.20.3'
+    provided project(':ev3classes')
+}

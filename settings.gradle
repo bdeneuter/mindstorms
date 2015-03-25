@@ -1,0 +1,10 @@
+rootProject.name = 'mindstorms'
+include ':dbusjava'
+include ':ev3classes'
+include ':robot'
+include ':gripper'
+
+project(':dbusjava').projectDir = "$rootDir/dbusjava" as File
+project(':ev3classes').projectDir = "$rootDir/ev3classes" as File
+project(':robot').projectDir = "$rootDir/robot" as File
+project(':gripper').projectDir = "$rootDir/gripper" as File
