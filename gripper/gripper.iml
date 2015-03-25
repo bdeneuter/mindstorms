@@ -14,10 +14,8 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="module" module-name="ev3classes" scope="PROVIDED" />
     <orderEntry type="module" module-name="robot" exported="" />
     <orderEntry type="library" exported="" name="Gradle: com.google.guava:guava:18.0" level="project" />
-    <orderEntry type="library" exported="" name="Gradle: lejos:ev3classes:0.8.1-BETA" level="project" />
-    <orderEntry type="library" exported="" name="Gradle: lejos:dbusjava:0.8.1-BETA" level="project" />
-    <orderEntry type="library" exported="" name="Gradle: net.java.dev.jna:jna:3.2.7" level="project" />
   </component>
 </module>

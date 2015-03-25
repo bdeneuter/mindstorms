@@ -19,7 +19,8 @@ jar {
         attributes('Class-Path':
                 'home/root/lejos/lib/ev3classes.jar ' +
                         '/home/root/lejos/lib/dbusjava.jar ' +
-                        '/home/root/lejos/libjna/usr/share/java/jna.jar')
+                        '/home/root/lejos/libjna/usr/share/java/jna.jar',
+                    'Main-Class': 'org.osito.mindstorms.gripper.Gripper')
     }
 }
 
