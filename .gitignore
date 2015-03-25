@@ -7,3 +7,5 @@ release.properties
 .classpath
 .project
 build/
+.idea/
+.gradle/
