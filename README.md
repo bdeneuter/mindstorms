@@ -13,5 +13,6 @@ You can find this information also on [the EV3 wiki](https://sourceforge.net/p/l
 
 * Mount the SD card to your development machine
 * Download the latest LeJOS distribution for EV3 on your development machine and unpack the archive: [leJOS_EV3_0.9.0](https://sourceforge.net/projects/lejos/files/lejos-EV3/0.9.0-beta/leJOS_EV3_0.9.0-beta.tar.gz/download)
+* Unpack the archive lejosimage.zip to the SD card. You find the file in the directory where you unpacked the LeJOS distribution.
 
 
