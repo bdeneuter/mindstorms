@@ -23,6 +23,7 @@ You can find this information also on [the EV3 wiki](https://sourceforge.net/p/l
 * Accept the license agreement and download the latest ejdk-8 to your development machine. __REMARK: This is not the jre itself but contains the tools that we will use to build a jre for the EV3 brick__
 * Unpack the ejdk-8 to your development machine
 * Open a terminal/command line and go to the bin directory in the unpacked ejdk-8 directory
-* execute the program ./jrecreate.sh (jrecreate.bat if you are on windows)
+* execute the command: ```shell ./jrecreate.sh --dest ~/ejre-8 ```. The jre will be created in the ~/ejre-8 directory.
+* Create a __tar.gz__ archive from the ~/ejre-8 directory: ```shell tar -zcvf ~/ejre-8.tar.gz ~/ejre-8  ```
 
 
