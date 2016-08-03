@@ -19,7 +19,7 @@ You can find this information also on [the EV3 wiki](https://sourceforge.net/p/l
 
 ### Step 2. Create an embedded Java 8 Runtime Environment for the EV3 Brick
 
-* Go to the [Oracle website](http://www.oracle.com/technetwork/java/embedded/downloads/javase/javaseemeddedev3-1982511.html) for downloading the latest ejre-8
+* Go to the [Oracle website](http://www.oracle.com/technetwork/java/embedded/downloads/javase/javaseemeddedev3-1982511.html) for downloading the latest ejdk-8
 * Accept the license agreement and download the latest ejdk-8 to your development machine. __REMARK: This is not the jre itself but contains the tools that we will use to build a jre for the EV3 brick__
 * Unpack the ejdk-8 to your development machine
 * Open a terminal/command line and go to the bin directory in the unpacked ejdk-8 directory
