@@ -30,6 +30,8 @@ You can find this information also on [the EV3 wiki](https://sourceforge.net/p/l
 ### Step 3. Launch LeJOS on the EV3 brick
 
 * Put the SD card in the EV3 brick
-* Start the brick and it should launch LeJOS 
+* * __Optional__: Put the WiFi dongle in the USB port of the EV3 brick
+* Start the brick and it should after a while launch LeJOS
+* * __Optional__: Configure WifI on the brick with the menu or follow [the wiki from LeJOS](https://sourceforge.net/p/lejos/wiki/Configuring%20Wifi/). The second IP is the IP we will use in our gradle build to point to the the EV3 brick.
 
 
