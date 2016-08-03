@@ -15,7 +15,7 @@ You can find this information also on [the EV3 wiki](https://sourceforge.net/p/l
 
 * Mount the SD card to your development machine
 * Download the latest LeJOS distribution for EV3 on your development machine and unpack the archive: [leJOS_EV3_0.9.0](https://sourceforge.net/projects/lejos/files/lejos-EV3/0.9.0-beta/leJOS_EV3_0.9.0-beta.tar.gz/download)
-* Unpack the archive lejosimage.zip to the SD card. You find the file in the directory where you unpacked the LeJOS distribution.
+* Unpack the archive lejosimage.zip to the root of the SD card. You find the file in the directory where you unpacked the LeJOS distribution.
 
 ### Step 2. Create an embedded Java 8 Runtime Environment for the EV3 Brick
 
@@ -25,5 +25,11 @@ You can find this information also on [the EV3 wiki](https://sourceforge.net/p/l
 * Open a terminal/command line and go to the bin directory in the unpacked ejdk-8 directory
 * execute the following command and he jre will be created in the ~/ejre-8 directory: ```./jrecreate.sh --dest ~/ejre-8 ```
 * Create a __tar.gz__ archive from the ~/ejre-8 directory: ```tar -zcvf ~/ejre-8.tar.gz ~/ejre-8  ```
+* Copy the archive ~/ejre-8.tar.gz to the root of the SD card
+
+### Step 3. Launch LeJOS on the EV3 brick
+
+* Put the SD card in the EV3 brick
+* Start the brick and it should launch LeJOS 
 
 
