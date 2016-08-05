@@ -36,12 +36,14 @@ You can find this information also on [the EV3 wiki](https://sourceforge.net/p/l
 * Start the brick and it should after a while launch LeJOS
 * * __Optional__: Configure WifI on the brick with the menu or follow [the wiki from LeJOS](https://sourceforge.net/p/lejos/wiki/Configuring%20Wifi/). The second IP is the IP we will use in our gradle build to point to the the EV3 brick.
 
-## TODO: explain setup gradle
+## Create a gradle project for your application
 
 I'm working on a gradle plugin. The advantage of using a build tool like gradle are:
 * Dependency management: A lot of Java libraries exist today and are published in repositories like [Maven Central](http://search.maven.org/) (ex.: guava, commons-lang3, ...). With gradle they are easy to add to your project.
 * You can use your preferred IDE. It is a normal java project.
 * Deploy your code to the EV3 brick from your IDE or from the terminal
+
+Create a gradle project and apply the plugin 'com.github.bdeneuter.mindstorms.ev3'. Have a look at the [plugin website](https://github.com/bdeneuter/mindstorms-plugin) for more information on how to use it.
 
 ## TODO: Explain RX Java decorators around the LeJOS EV3 sensor API
 
