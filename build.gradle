@@ -1,16 +1,1 @@
-plugins {
-    id "nebula.provided-base" version "2.2.0"
-}
 
-subprojects {
-    apply plugin: "nebula.provided-base"
-    apply plugin: 'java'
-    sourceCompatibility = 1.8
-    targetCompatibility = 1.8
-
-    repositories {
-        mavenCentral()
-    }
-
-
-}

@@ -1,5 +1,82 @@
-dependencies {
+apply plugin: Mindstorms
 
-    compileOnly project(":ev3classes")
+dependencies {
+    compile 'com.google.guava:guava:19.0'
+}
+
+mindstorms {
+    main = 'com.github.bdeneuter.mindstorms.samples.HelloWorld'
+}
+
+class Mindstorms implements Plugin<Project> {
+    void apply(Project project) {
+        project.extensions.create("mindstorms", MindstormsExtension)
+        project.configure(project) {
+
+            apply plugin: 'java'
+
+            sourceCompatibility = 1.8
+            targetCompatibility = 1.8
+
+            repositories {
+                mavenCentral()
+            }
+
+            configurations {
+                scp
+            }
+
+            dependencies {
+                compileOnly 'com.github.bdeneuter:lejos-ev3-api:0.9.1-beta'
+                scp 'org.apache.ant:ant-jsch:1.9.4'
+            }
+
+            jar {
+
+                from {
+                    (configurations.runtime).collect {
+                        it.isDirectory() ? it : zipTree(it)
+                    }
+                }
+
+                manifest {
+                    attributes('Class-Path':
+                            'home/root/lejos/lib/ev3classes.jar ' +
+                                    '/home/root/lejos/lib/dbusjava.jar ' +
+                                    '/home/root/lejos/libjna/usr/share/java/jna.jar',
+                            'Main-Class': "${project.mindstorms.main}")
+                }
+            }
+
+            project.task(dependsOn: 'assemble', 'copyToRobot') << {
+
+                ant.taskdef(
+                        name: 'scp',
+                        classname: 'org.apache.tools.ant.taskdefs.optional.ssh.Scp',
+                        classpath: configurations.scp.asPath)
+
+                new File(buildDir, 'libs')
+                        .listFiles()
+                        .findAll { it.name.endsWith '.jar' }
+                        .each {
+                    ant.scp(
+                            file: it,
+                            todir: brick_user + '@' + brick_host + ':' + brick_home,
+                            username: brick_user,
+                            password: '',
+                            trust: true
+                    )
+                }
+
+            }
+
+        }
+
+    }
+}
+
+class MindstormsExtension {
+
+    String main;
 
 }
