@@ -50,7 +50,7 @@ public class RemotePort implements Port
         switch(typ)
         {
         case SENSOR_PORT:
-            if (portclass == UARTPort.class)
+            if (portclass == RemoteUARTPort.class || portclass == UARTPort.class)
                 p = new RemoteUARTPort(rmiEV3);
             if (portclass == RemoteAnalogPort.class || portclass == AnalogPort.class)
                 p = new RemoteAnalogPort(rmiEV3);
@@ -70,19 +70,5 @@ public class RemotePort implements Port
         if (!p.open(typ,  portNum, this))
             throw new DeviceException("unable to open port");
         return portclass.cast(p);
-    }
-
-    @Override
-    public int getPortType()
-    {
-        // TODO Should this method work for a remote port?
-        return EV3SensorConstants.CONN_NONE;
-    }
-
-    @Override
-    public int getSensorType()
-    {
-        // TODO Should this method work for a remote port?
-        return EV3SensorConstants.TYPE_NONE;
     }
 }

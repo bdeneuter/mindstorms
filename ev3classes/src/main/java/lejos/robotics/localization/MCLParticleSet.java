@@ -274,12 +274,16 @@ public MCLParticleSet(RangeMap map, int numParticles, Pose initialPose,
    * @param move the move to apply
    */
   public void applyMove(Move move) {
+	if (move == null) {
+		System.out.println("applyMove: null move");
+		return;
+	}
     if(debug)System.out.println("particles applyMove "+move.getMoveType());
 	maxWeight = 0f;
     for (int i = 0; i < numParticles; i++) {
       particles[i].applyMove(move, distanceNoiseFactor, angleNoiseFactor);
     }
-       if(debug)System.out.println("particles applyMove Exit");
+    if(debug)System.out.println("particles applyMove Exit");
   }
 
   /**

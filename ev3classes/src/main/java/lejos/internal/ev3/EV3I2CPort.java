@@ -1,5 +1,6 @@
 package lejos.internal.ev3;
 
+import java.io.IOError;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
@@ -23,95 +24,29 @@ import lejos.utility.Delay;
 public class EV3I2CPort extends EV3IOPort implements I2CPort
 {
     protected static NativeDevice i2c;
-    protected static Pointer pIic;
-    protected static ByteBuffer iicStatus;
-    protected static ByteBuffer iicChanged;
     static {
         initDeviceIO();
     }
-    protected static final int IIC_SET_CONN = 0xc00c6902;
-    protected static final int IIC_READ_TYPE_INFO = 0xc03c6903;
-    protected static final int IIC_SETUP = 0xc04c6905;
-    protected static final int IIC_SET = 0xc02c6906;
-    
-    protected static final int IIC_SIZE = 42748;
-    protected static final int IIC_STATUS_OFF = 42608;
-    protected static final int IIC_CHANGED_OFF = 42612;
-    
+    protected static final int IIC_CONNECT = 0xc0036907;
+    protected static final int IIC_DISCONNECT = 0xc0036908;
+    protected static final int IIC_IO = 0xc0036909;
+        
     protected static final int IO_TIMEOUT = 2000;
-
-    public static class IICDATA extends Structure
-    {
-      public int  Result;
-      public byte Port;
-      public byte Repeat;
-      public short Time;
-      public byte WrLng;
-      public byte[] WrData = new byte[IIC_DATA_LENGTH];
-      public byte RdLng;
-      public byte[] RdData = new byte[IIC_DATA_LENGTH];
-    @Override
-    protected List getFieldOrder()
-    {
-        // TODO Auto-generated method stub
-        return Arrays.asList(new String[] {"Result", "Port", "Repeat", "Time", "WrLng", "WrData", "RdLng", "RdData"});
-    }
-    };
-    protected IICDATA iicdata = new IICDATA();
     
-    public static final int STANDARD_MODE = 0;
-    public static final int LEGO_MODE = 1;
-    public static final int ALWAYS_ACTIVE = 2;
+    protected static final byte SPEED_10KHZ = 0;
+    protected static final byte SPEED_100KHZ = 1;
 
    
-    /** Do not release the i2c bus between requests */
-    public static final int NO_RELEASE = 4;
-    /** Use high speed I/O (125KHz) */
-    public static final int HIGH_SPEED = 8;
     /** Maximum read/write request length */
     public static final int MAX_IO = IIC_DATA_LENGTH;
     
-    protected EV3DeviceManager ldm = EV3DeviceManager.getLocalDeviceManager();
+    protected byte[] cmd = new byte[IIC_DATA_LENGTH + 5];
+    protected byte speed = SPEED_10KHZ;
 
-    protected boolean getChanged()
-    {
-        return iicChanged.get(port) != 0;
-    }
-    
-    protected byte getStatus()
-    {
-        return iicStatus.get(port);
-    }
-
-    protected void reset()
-    {
-        i2c.ioctl(IIC_SET_CONN, devCon(port, CONN_NONE, 0, 0));        
-    }
-
-    protected void setOperatingMode(int typ, int mode)
-    {
-        i2c.ioctl(IIC_SET_CONN, devCon(port, CONN_NXT_IIC, typ, mode));        
-    }
-    
     protected boolean initSensor()
     {
-        //setPinMode(CMD_FLOAT);
-        reset();
-        Delay.msDelay(100);
-        iicChanged.put(port, (byte)0);
-        setOperatingMode(TYPE_IIC_UNKNOWN, 255);
-        //System.out.println("Status " + getStatus() + " changed " + getChanged());
-        /*
-        while (!getChanged())
-        {
-            Delay.msDelay(100);
-            System.out.println("Status " + getStatus() + " changed " + getChanged());
-        }*/
-        Delay.msDelay(100);
-        setOperatingMode(TYPE_IIC_UNKNOWN, 0);        
-        //System.out.println("Status " + getStatus() + " changed " + getChanged());
-        Delay.msDelay(100);
-        //System.out.println("Status " + getStatus() + " changed " + getChanged());
+        cmd[0] = (byte)port;
+        i2c.ioctl(IIC_CONNECT, cmd); 
         return true;
     }
     
@@ -121,24 +56,40 @@ public class EV3I2CPort extends EV3IOPort implements I2CPort
      */
     public boolean open(int t, int p, EV3Port r)
     {
-        if (ldm.getPortType(p) != CONN_NXT_IIC)
-            return false;
         if (!super.open(t, p, r))
             return false;
         // Set pin state to a sane default
         setPinMode(CMD_FLOAT);
         return true;
     }
+
+    /** {@inheritDoc}
+     */    
+    @Override
+    public void close()
+    {
+        cmd[0] = (byte)port;
+        i2c.ioctl(IIC_DISCONNECT, cmd);        
+        super.close();
+    }
     
+
     @Override
     public boolean setType(int type)
     {
         //System.out.println("Set type " + type);
+        speed = SPEED_10KHZ;
         switch(type)
         {
+        case TYPE_HIGHSPEED:
+            speed = SPEED_100KHZ;
+            // fall through
         case TYPE_LOWSPEED:
             setPinMode(CMD_SET|CMD_PIN5);
             break;
+        case TYPE_HIGHSPEED_9V:
+            speed = SPEED_100KHZ;
+            // fall through
         case TYPE_LOWSPEED_9V:
             setPinMode(CMD_SET|CMD_PIN1|CMD_PIN5);
             break;
@@ -165,45 +116,39 @@ public class EV3I2CPort extends EV3IOPort implements I2CPort
             int writeOffset, int writeLen, byte[] readBuf, int readOffset,
             int readLen)
     {
-        long timeout = System.currentTimeMillis() + IO_TIMEOUT;
-        //System.out.println("ioctl: " + deviceAddress + " wlen " + writeLen);
-        iicdata.Port = (byte)port;
-        iicdata.Result = -1;
-        iicdata.Repeat = 1;
-        iicdata.Time = 0;
-        iicdata.WrLng = (byte)(writeLen + 1);
-        System.arraycopy(writeBuf, writeOffset, iicdata.WrData, 1, writeLen);
-        iicdata.WrData[0] = (byte)(deviceAddress >> 1);
-        iicdata.WrLng = (byte)(writeLen + 1);
-        // note -ve value due to Lego's crazy reverse order stuff
-        iicdata.RdLng = (byte)-readLen;
-        iicdata.write();
-        while(timeout > System.currentTimeMillis())
+        //long st = System.currentTimeMillis();
+        cmd[0] = (byte)port;
+        cmd[1] = speed;
+        cmd[2] = (byte) readLen;
+        cmd[3] = (byte) writeLen;
+        cmd[4] = (byte) (deviceAddress >> 1);
+        if (writeLen > 0) System.arraycopy(writeBuf, writeOffset, cmd, 5, writeLen);
+        i2c.ioctl(IIC_IO, cmd);
+        int result = (int) cmd[1];
+        if (result == STATUS_FAIL)
+            throw new I2CException("I2C I/O error");
+        if (result == STATUS_BUSY)
+            throw new I2CException("I2C Bus busy");            
+        if (result == STATUS_OK)
         {
-            iicdata.write();
-            i2c.ioctl(IIC_SETUP, iicdata.getPointer());
-            iicdata.read();
-            //System.out.println("Ioctl result: " + iicdata.Result);
-            if (iicdata.Result < 0)
-                throw new I2CException("I2C read error");
-            if (iicdata.Result == STATUS_OK)
-            {
-                if (readLen > 0)
-                    System.arraycopy(iicdata.RdData, 0, readBuf, readOffset,  readLen);
-                return;
-            }
-            Thread.yield();
+            //System.out.println("iic time " + (System.currentTimeMillis() - st));
+            if (readLen > 0)
+                System.arraycopy(cmd, 5, readBuf, readOffset,  readLen);
+            return;
         }
-        throw new I2CException("I2C timeout");
+        //System.out.println("i2c error res is " + result);
+        throw new I2CException("I2C Unexpected error " + result);
     }
     
-    
+
     private static void initDeviceIO()
     {
-        i2c = new NativeDevice("/dev/lms_iic");
-        pIic = i2c.mmap(IIC_SIZE);
-        iicStatus = pIic.getByteBuffer(IIC_STATUS_OFF, PORTS);
-        iicChanged = pIic.getByteBuffer(IIC_CHANGED_OFF, PORTS*2);
+        try {
+            i2c = new NativeDevice("/dev/lms_iic");
+        } catch (IOError e)
+        {
+            throw new UnsupportedOperationException("Unable to access EV3 hardware. Is this an EV3?", e);
+        }
     }
     
 }

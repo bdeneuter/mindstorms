@@ -112,4 +112,45 @@ public class RemoteUARTPort extends RemoteIOPort implements UARTPort {
 			throw new PortException(e);
 		}
 	}
+
+    @Override
+    public int rawRead(byte[] buffer, int offset, int len)
+    {
+        try {
+            return rmi.rawRead(buffer, offset, len);
+        } catch (RemoteException e) {
+            throw new PortException(e);
+        }
+    }
+
+    @Override
+    public int rawWrite(byte[] buffer, int offset, int len)
+    {
+        try {
+            return rmi.rawWrite(buffer, offset, len);
+        } catch (RemoteException e) {
+            throw new PortException(e);
+        }
+    }
+
+    @Override
+    public void setBitRate(int bitRate)
+    {
+        try {
+            rmi.setBitRate(bitRate);
+        } catch (RemoteException e) {
+            throw new PortException(e);
+        }
+    }
+
+    @Override
+    public int write(byte[] buffer, int offset, int len)
+    {
+        try {
+            return rmi.write(buffer, offset, len);
+        } catch (RemoteException e) {
+            throw new PortException(e);
+        }
+
+    }
 }

@@ -97,7 +97,7 @@ public class Move implements Transmittable {
    */
   public void setValues(MoveType type, float distance, float angle,boolean isMoving)
   {
-    this.moveType = Move.calcMoveType(distance, angle);
+  this.moveType = type;
 	this.distanceTraveled = distance;
 	this.angleTurned = angle;
 	this.isMoving = isMoving;
@@ -108,6 +108,17 @@ public class Move implements Transmittable {
 		arcRadius = (float) (distance / turnRad);
 	}
 	this.timeStamp = System.currentTimeMillis();
+  }
+  
+  /**
+   * use this method to recycle an existing Move instead of creating a new one
+   * @param travelSpeed the new travelspeed
+   * @param rotateSpeed the new rotate speed
+   */
+  public void setDynamics(float travelSpeed, float rotateSpeed)
+  {
+    this.travelSpeed = travelSpeed;
+    this.rotateSpeed = rotateSpeed;
   }
 
 	/**

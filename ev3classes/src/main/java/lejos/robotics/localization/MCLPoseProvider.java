@@ -8,9 +8,10 @@ import lejos.robotics.navigation.Pose;
 import lejos.robotics.RangeReadings;
 import lejos.robotics.RangeScanner;
 import lejos.robotics.Transmittable;
-
-import java.awt.Rectangle;
+import lejos.robotics.geometry.Rectangle2D;
+import lejos.robotics.geometry.RectangleInt32;
 import lejos.robotics.localization.PoseProvider;
+
 import java.io.*;
 import java.util.ArrayList;
 
@@ -69,7 +70,7 @@ public class MCLPoseProvider implements PoseProvider, MoveListener, Transmittabl
     this.map = map;
     if (mp != null) mp.addMoveListener(this);
     updated = false;
-    updater.start();
+    //updater.start();
   }
   
   /**
@@ -147,7 +148,9 @@ public class MCLPoseProvider implements PoseProvider, MoveListener, Transmittabl
    */
   public MCLParticleSet getParticles()
   {
-    return particles;
+    synchronized (particles) {
+    	return particles;
+    }
   }
   
   /**
@@ -193,8 +196,9 @@ public class MCLPoseProvider implements PoseProvider, MoveListener, Transmittabl
   public void moveStopped(Move event, MoveProvider mp)
   {
 	if (debug) System.out.println("MCL move stopped");
-    updated = false;
-    updater.moveStopped(event);
+    //updated = false;
+    //updater.moveStopped(event);
+	particles.applyMove(event);
   }
 
   /**
@@ -214,6 +218,7 @@ public class MCLPoseProvider implements PoseProvider, MoveListener, Transmittabl
       return false;
     }
     readings = scanner.getRangeValues();
+    if (debug) readings.printReadings();
     incomplete = readings.incomplete();
     //    if(debug) System.out.println("mcl Update: range readings " + readings.getNumReadings());
     if (incomplete  )
@@ -395,9 +400,9 @@ public class MCLPoseProvider implements PoseProvider, MoveListener, Transmittabl
    * Returns the minimum rectangle enclosing all the particles
    * @return rectangle : the minimum rectangle enclosing all the particles
    */
-  public Rectangle getErrorRect()
+  public Rectangle2D getErrorRect()
   {
-    return new Rectangle((int) minX, (int) minY,
+    return new RectangleInt32((int) minX, (int) minY,
             (int) (maxX - minX), (int) (maxY - minY));
   }
 
@@ -541,11 +546,17 @@ public class MCLPoseProvider implements PoseProvider, MoveListener, Transmittabl
       {
         while(!events.isEmpty())
         {
-          if(debug) System.out.println("Updater move stop "+events.get(0).getMoveType());
-          busy = true;
-
-          particles.applyMove(events.get(0));      
-          if(debug) System.out.println("applied move ");
+          Move event = events.get(0);
+          if (event == null) System.out.println("MCLPoseProvider: null event");
+          else {
+	          if(debug) System.out.println("Updater move stop "+event.getMoveType());
+	          busy = true;
+	
+	          synchronized (particles) {
+	        	  particles.applyMove(event);      
+	          }
+	          if(debug) System.out.println("applied move ");
+          }
           events.remove(0);
         }
         busy = false;

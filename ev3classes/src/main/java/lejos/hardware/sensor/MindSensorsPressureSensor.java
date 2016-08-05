@@ -4,13 +4,57 @@ import lejos.hardware.port.I2CPort;
 import lejos.hardware.port.Port;
 import lejos.utility.EndianTools;
 
+
 /**
- * This class support the Digital Pneumatic Pressure Sensor (PPS58-Nx) by MindSensors.
+ * <b>MindSensors Pressure Sensor</b><br>
+ * This sensor measures pressures produced by LEGO Pneumatics systems and lot more!
  * 
- * See http://www.mindsensors.com/index.php?module=pagemaster&PAGE_user_op=view_page&PAGE_id=150
+ * <p style="color:red;">
+ * The code for this sensor has not been tested. Please report test results to
+ * the <A href="http://www.lejos.org/forum/"> leJOS forum</a>.
+ * </p>
+ * 
+ * <p>
+ * <table border=1>
+ * <tr>
+ * <th colspan=4>Supported modes</th>
+ * </tr>
+ * <tr>
+ * <th>Mode name</th>
+ * <th>Description</th>
+ * <th>unit(s)</th>
+ * <th>Getter</th>
+ * </tr>
+ * <tr>
+ * <td>Pressure</td>
+ * <td>Measures the absolute pressure</td>
+ * <td>Pascal</td>
+ * <td> {@link #getPressureMode() }</td>
+ * </tr>
+ * </table>
+ * 
+ * 
+ * <p>
+ * <b>Sensor configuration</b><br>
+ * Description of default sensor configuration (when that matters). Description
+ * of available methods for configuration.
+ * 
+ * <p>
+ * 
+ * See <a href="http://www.mindsensors.com/index.php?module=documents&JAS_DocumentManager_op=downloadFile&JAS_File_id=1046"> Sensor datasheet </a>
+ * See <a href="http://www.mindsensors.com/index.php?module=pagemaster&PAGE_user_op=view_page&PAGE_id=150"> Sensor Product page </a>
+ * See <a href="http://sourceforge.net/p/lejos/wiki/Sensor%20Framework/"> The
+ *      leJOS sensor framework</a>
+ * See {@link lejos.robotics.SampleProvider leJOS conventions for
+ *      SampleProviders}
+ * 
+ *      <p>
+ * 
+ * 
+ * @author fussel_dlx
  * 
  */
-public class MindSensorsPressureSensor extends I2CSensor implements SensorMode {
+public class MindSensorsPressureSensor extends I2CSensor  {
 
 	/*
 	 * Code contributed and tested by fussel_dlx on the forums:
@@ -37,15 +81,17 @@ public class MindSensorsPressureSensor extends I2CSensor implements SensorMode {
     }
     
     protected void init() {
-    	setModes(new SensorMode[]{ this });
+    	setModes(new SensorMode[]{ new PressureMode() });
     }
     
     /**
-     * Return a ample provider for pressure mode
+     * Return a ample provider for pressure mode. Pressure is expressed in Pascal.
      */
     public SensorMode getPressureMode() {
-    	return this;
+    	return getMode(0);
     }
+    
+private class PressureMode implements SensorMode {    
 
 	@Override
 	public int sampleSize() {
@@ -55,11 +101,12 @@ public class MindSensorsPressureSensor extends I2CSensor implements SensorMode {
 	@Override
 	public void fetchSample(float[] sample, int offset) {
 		getData(0x53, buf, 0, 4);		
-		sample[offset] = (float) EndianTools.decodeIntLE(buf, 0);
+		sample[offset] = EndianTools.decodeIntLE(buf, 0);
 	}
 
 	@Override
 	public String getName() {
 		return "Pressure";
 	}
+}
 }
