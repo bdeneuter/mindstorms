@@ -1,3 +1,4 @@
 rootProject.name = 'mindstorms'
 //include ':dbusjava'
 include ':ev3classes'
+include ':samples'
