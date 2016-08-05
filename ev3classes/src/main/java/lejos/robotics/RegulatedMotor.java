@@ -2,6 +2,10 @@ package lejos.robotics;
 
 import java.io.Closeable;
 
+import lejos.hardware.motor.BaseRegulatedMotor;
+import lejos.hardware.motor.MotorRegulator;
+import lejos.internal.ev3.EV3MotorPort;
+
 /**
  * Interface for encoded motors without limited range of movement (e.g. NXT motor).
  * TODO: Alternate names: EncodedMotor,EncoderMotor. 
@@ -113,7 +117,8 @@ public interface RegulatedMotor extends BaseMotor, Tachometer, Closeable {
   int getSpeed();
  
   /**
-   * Returns the maximim speed of the motor.
+   * Returns the maximum speed that can be maintained by the regulation system based upon the 
+   * current state of the battery.
    * 
    * @return the maximum speed of the Motor in degrees per second.
    */
@@ -140,6 +145,26 @@ public interface RegulatedMotor extends BaseMotor, Tachometer, Closeable {
     * @param acceleration
     */
    void setAcceleration(int acceleration);
+   /**
+    * Specify a set of motors that should be kept in synchronization with this one.
+    * The synchronization mechanism simply ensures that operations between a startSynchronization
+    * call and an endSynchronization call will all be executed at the same time (when the 
+    * endSynchronization method is called). This is all that is needed to ensure that motors
+    * will operate in a synchronized fashion. The start/end methods can also be used to ensure
+    * that reads of the motor state will also be consistent.
+    * @param syncList an array of motors to synchronize with.
+    */
+   public void synchronizeWith(RegulatedMotor[] syncList);
+
+   /**
+    * Begin a set of synchronized motor operations
+    */
+   public void startSynchronization();
+
+   /**
+    * Complete a set of synchronized motor operations.
+    */
+   public void endSynchronization();
    
    /**
     * Close the port, the port can not be used after this call.

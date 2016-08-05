@@ -1,5 +1,6 @@
 package lejos.hardware.sensor;
 
+import lejos.hardware.DeviceException;
 import lejos.hardware.port.Port;
 import lejos.hardware.port.UARTPort;
 
@@ -43,7 +44,7 @@ public class UARTSensor extends BaseSensor
     {
         this.port = port;
         if (!port.setMode(mode))
-            throw new IllegalArgumentException("Invalid sensor mode");
+            throw new DeviceException("Unable to initialize device");
         currentMode = mode;
     }
     
@@ -54,12 +55,13 @@ public class UARTSensor extends BaseSensor
      */
     public UARTSensor(Port port, int mode)
     {
-        this(port.open(UARTPort.class));
+        this.port = port.open(UARTPort.class);
         if (!this.port.setMode(mode))
         {
             this.port.close();
             throw new IllegalArgumentException("Invalid sensor mode");
         }
+        currentMode = mode;
         releaseOnClose(this.port);
     }
     

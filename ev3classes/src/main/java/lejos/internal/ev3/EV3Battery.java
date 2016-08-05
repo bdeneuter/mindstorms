@@ -12,8 +12,8 @@ import lejos.hardware.sensor.EV3SensorConstants;
  */
 public class EV3Battery implements Power
 {
-    protected final static float SHUNT_IN = 0.11f;
-    protected final static float AMP_CIN = 22.0f;
+    protected final static float SHUNT_IN = 0.05f;
+    protected final static float AMP_CIN = 15.0f;
     protected final static float SHUNT_OUT = 0.055f;
     protected final static float AMP_COUT = 19.0f;
     protected final static float VCE = 0.05f;

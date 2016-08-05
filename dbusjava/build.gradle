@@ -1,3 +1,4 @@
 dependencies {
-    compile group: 'net.java.dev.jna', name: 'jna', version:'3.2.7'
+    compile 'com.github.bdeneuter:dbus-java:2.7'
+    compile 'net.java.dev.jna:jna:3.2.7'
 }

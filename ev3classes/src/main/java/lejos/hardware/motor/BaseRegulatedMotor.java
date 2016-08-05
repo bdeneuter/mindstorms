@@ -4,6 +4,7 @@ import lejos.hardware.Device;
 import lejos.hardware.ev3.LocalEV3;
 import lejos.hardware.port.Port;
 import lejos.hardware.port.TachoMotorPort;
+//import lejos.internal.ev3.EV3MotorPort;
 import lejos.robotics.RegulatedMotor;
 import lejos.robotics.RegulatedMotorListener;
 /**
@@ -13,7 +14,8 @@ import lejos.robotics.RegulatedMotorListener;
  * and <code>flt</code>. To set each motor's velocity, use {@link #setSpeed(int)
  * <code>setSpeed  </code> }.
  * The maximum velocity of the motor is limited by the battery voltage and load.
- * With no load, the maximum degrees per second is about 100 times the voltage.  <br>
+ * With no load, the maximum degrees per second is about 100 times the voltage
+ * (for the large EV3 motor).  <br>
  * The velocity is regulated by comparing the tacho count with velocity times elapsed
  * time, and adjusting motor power to keep these closely matched. Changes in velocity
  * will be made at the rate specified via the
@@ -51,7 +53,8 @@ import lejos.robotics.RegulatedMotorListener;
  */
 public abstract class BaseRegulatedMotor extends Device implements RegulatedMotor
 {
-
+    // Following should be set to the max SPEED (in deg/sec) of the motor when free running and powered by 9V
+    protected final int MAX_SPEED_AT_9V;
     protected static final int NO_LIMIT = 0x7fffffff;
     protected final MotorRegulator reg;
     protected TachoMotorPort tachoPort;
@@ -63,7 +66,7 @@ public abstract class BaseRegulatedMotor extends Device implements RegulatedMoto
      * @param port  to which this motor is connected
      */
     public BaseRegulatedMotor(TachoMotorPort port, MotorRegulator regulator, 
-            int typ, float moveP, float moveI, float moveD, float holdP, float holdI, float holdD, int offset)
+            int typ, float moveP, float moveI, float moveD, float holdP, float holdI, float holdD, int offset, int maxSpeed)
     {
         tachoPort = port;
         // Use default regulator if non specified
@@ -71,6 +74,7 @@ public abstract class BaseRegulatedMotor extends Device implements RegulatedMoto
             reg = port.getRegulator();
         else
             reg = regulator;
+        MAX_SPEED_AT_9V = maxSpeed;
         reg.setControlParamaters(typ, moveP, moveI, moveD, holdP, holdI, holdD, offset);   
     }
     
@@ -79,9 +83,9 @@ public abstract class BaseRegulatedMotor extends Device implements RegulatedMoto
      * @param port  to which this motor is connected
      */
     public BaseRegulatedMotor(Port port, MotorRegulator regulator, int typ, float moveP, float moveI,
-            float moveD, float holdP, float holdI, float holdD, int offset)
+            float moveD, float holdP, float holdI, float holdD, int offset, int maxSpeed)
     {
-        this(port.open(TachoMotorPort.class), regulator, typ, moveP, moveI, moveD, holdP, holdI, holdD, offset);
+        this(port.open(TachoMotorPort.class), regulator, typ, moveP, moveI, moveD, holdP, holdI, holdD, offset, maxSpeed);
         releaseOnClose(tachoPort);
     }
 
@@ -129,9 +133,9 @@ public abstract class BaseRegulatedMotor extends Device implements RegulatedMoto
      * if regulation has been suspended calling this method will restart it.
      * @return the current position calculated by the regulator.
      */
-    public int getPosition()
+    public float getPosition()
     {
-        return Math.round(reg.getPosition());
+        return reg.getPosition();
     }
 
     /**
@@ -380,9 +384,46 @@ public abstract class BaseRegulatedMotor extends Device implements RegulatedMoto
 
 
     public float getMaxSpeed() {
-        // It is generally assumed, that the maximum accurate speed of Motor is
-        // 100 degree/second * Voltage
+        // It is generally assumed, that the maximum accurate speed of an EV3 Motor is
+        // 100 degree/second * Voltage. We generalise this to other LEGO motors by returning a value
+        // that is based on 90% of the maximum free running speed of the motor.
         // TODO: Should this be using the Brick interface?
-        return LocalEV3.ev3.getPower().getVoltage() * 100.0f;
+        // TODO: If we ever allow the regulator class be remote, then we will need to ensure we 
+        // get the voltage of the remote brick not the local one.
+        return LocalEV3.ev3.getPower().getVoltage() * MAX_SPEED_AT_9V/9.0f * 0.9f;
+    }
+
+    /**
+     * Specify a set of motors that should be kept in synchronization with this one.
+     * The synchronization mechanism simply ensures that operations between a startSynchronization
+     * call and an endSynchronization call will all be executed at the same time (when the 
+     * endSynchronization method is called). This is all that is needed to ensure that motors
+     * will operate in a synchronized fashion. The start/end methods can also be used to ensure
+     * that reads of the motor state will also be consistent.
+     * @param syncList an array of motors to synchronize with.
+     */
+    public void synchronizeWith(RegulatedMotor[] syncList)
+    {
+        // Create list of regualtors and pass it on!
+        MotorRegulator[] rl = new MotorRegulator[syncList.length];
+        for(int i = 0; i < syncList.length; i++)
+            rl[i] = ((BaseRegulatedMotor)syncList[i]).reg;
+        reg.synchronizeWith(rl);
+    }
+
+    /**
+     * Begin a set of synchronized motor operations
+     */
+    public void startSynchronization()
+    {
+        reg.startSynchronization();        
+    }
+
+    /**
+     * Complete a set of synchronized motor operations.
+     */
+    public void endSynchronization()
+    {
+        reg.endSynchronization(true);        
     }
 }

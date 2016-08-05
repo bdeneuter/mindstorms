@@ -1,5 +1,8 @@
 package lejos.robotics.filter;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+
 import lejos.robotics.SampleProvider;
 
 /**
@@ -226,10 +229,10 @@ public class LinearCalibrationFilter extends AbstractCalibrationFilter {
   @Override
   public void stopCalibration() {
     super.stopCalibration();
-    System.out.println("End calibration using " + numberOfSamplesInCalibration + " samples.");
-    for (int i = 0; i < sampleSize; i++) {
-      System.out.println("min: " + min[i] + " max: " + max[i] + " sum: " + sum[i] + " lowerbound: " + lowerBound[i] + " upperbound: " + upperBound[i] + " offset: " + offset[i] + "scale: " + scale[i]);
-    }
+//    System.out.println("End calibration using " + numberOfSamplesInCalibration + " samples.");
+//    for (int i = 0; i < sampleSize; i++) {
+//      System.out.println("min: " + min[i] + " max: " + max[i] + " sum: " + sum[i] + " lowerbound: " + lowerBound[i] + " upperbound: " + upperBound[i] + " offset: " + offset[i] + "scale: " + scale[i]);
+//    }
   }
 
   /**
@@ -249,10 +252,23 @@ public class LinearCalibrationFilter extends AbstractCalibrationFilter {
 
   public void open(String name) {
     reset();
-    load(name);
-    offset = getPropertyArray("offset");
-    scale = getPropertyArray("scale");
-    calibrationType = (int) getProperty("calibrationType");
+    try {
+      load(name);
+      offset = getPropertyArray("offset");
+      scale = getPropertyArray("scale");
+      calibrationType = (int) getProperty("calibrationType");
+    } catch (FileNotFoundException e) {
+      reset();
+      e.printStackTrace();
+    } catch (CalibrationFileException e) {
+      System.err.println(e);
+      reset();
+    }
+    catch (IOException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+      reset();
+    }
   }
 
   private void reset() {

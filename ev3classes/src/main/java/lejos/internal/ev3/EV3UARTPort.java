@@ -1,6 +1,8 @@
 package lejos.internal.ev3;
 
+import java.io.IOError;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.List;
 
@@ -13,7 +15,11 @@ import lejos.internal.io.NativeDevice;
 import lejos.utility.Delay;
 
 /**
- * Provide access to EV3 sensor ports operating in UART mode.<p><p>
+ * Provide access to EV3 sensor ports operating in UART mode.<p>
+ * A mechanism is provided to allow access to the RAW UART device
+ * allowing simple read/write operations. This RAW mode disables 
+ * the normal Lego protocol used to communicate with Lego UART
+ * sensors<p>
  * NOTE: This code is not pretty! The interface uses a number of structures mapped
  * into memory from the device. I am not aware of any clean way to implement this
  * interface in Java. So for now multiple pointers to bytes/ints array etc. are used this
@@ -39,13 +45,21 @@ public class EV3UARTPort extends EV3IOPort implements UARTPort
     protected static final int DEV_RAW_SIZE2 = 32;
     protected static final int DEV_ACTUAL_OFF = 42592;
     
+    protected static final int UART_CONNECT = 0xc0037507;
+    protected static final int UART_DISCONNECT = 0xc0037508;
+    protected static final int UART_SETMODE = 0xc0037509;
     protected static final int UART_SET_CONN = 0xc00c7500;
     protected static final int UART_READ_MODE_INFO = 0xc03c7501;
     protected static final int UART_NACK_MODE_INFO = 0xc03c7502;
     protected static final int UART_CLEAR_CHANGED = 0xc03c7503;
+    protected static final int UART_SET_CONFIG = 0xc0087504;
+    protected static final int UART_RAW_READ = 0xc0047505;
+    protected static final int UART_RAW_WRITE = 0xc0047506;
+            
     
     protected static final byte UART_PORT_CHANGED = 1;
     protected static final byte UART_DATA_READY = 8;
+    protected static final byte UART_PORT_ERROR = (byte)0x80;
     
     protected static final int TIMEOUT_DELTA = 1;
     protected static final int TIMEOUT = 4000;
@@ -53,12 +67,12 @@ public class EV3UARTPort extends EV3IOPort implements UARTPort
     protected static final int INIT_RETRY = 100;
     protected static final int OPEN_RETRY = 5;
     
+    protected static final int RAW_BUFFER_SIZE = 255;
+    
     static {
         initDeviceIO();
     }
     
-    protected EV3DeviceManager ldm = EV3DeviceManager.getLocalDeviceManager();
-
     /**
      * The following class maps directly to a C structure containing device information.
      * @author andy
@@ -142,8 +156,25 @@ public class EV3UARTPort extends EV3IOPort implements UARTPort
 
     }
     
+    public static class UARTCONFIG extends Structure
+    {
+        public int Port;
+        public int BitRate;
+        @Override
+        protected List getFieldOrder()
+        {
+            // TODO Auto-generated method stub
+            return Arrays.asList(new String[] {
+            "Port",
+            "BitRate"});
+        }
+    }
+    
     protected TYPES[] modeInfo = new TYPES[UART_MAX_MODES];
     protected int modeCnt = 0;
+    protected byte[] rawInput;
+    protected byte[] rawOutput;
+    protected byte[] cmd = new byte[3];
 
     /**
      * return the current status of the port
@@ -175,8 +206,6 @@ public class EV3UARTPort extends EV3IOPort implements UARTPort
         {
             if (status != 0)
                 return status;
-            if (ldm.getPortType(port) != CONN_INPUT_UART)
-                return status;
             Delay.msDelay(TIMEOUT_DELTA);
             status = getStatus();
         }
@@ -197,8 +226,6 @@ public class EV3UARTPort extends EV3IOPort implements UARTPort
         {
             if (status == 0)
                 return status;
-            if (ldm.getPortType(port) != CONN_INPUT_UART)
-                return status;
             Delay.msDelay(TIMEOUT_DELTA);
             status = getStatus();
         }
@@ -207,12 +234,31 @@ public class EV3UARTPort extends EV3IOPort implements UARTPort
     }
 
     /**
+     * Connect to the device
+     */
+    protected void connect()
+    {
+        cmd[0] = (byte)port;
+        uart.ioctl(UART_CONNECT, cmd);        
+    }
+
+    /**
+     * Disconnect to the device
+     */
+    protected void disconnect()
+    {
+        cmd[0] = (byte)port;
+        uart.ioctl(UART_DISCONNECT, cmd);        
+    }
+
+    /**
      * reset the port and device
      */
     protected void reset()
     {
         // Force the device to reset
-        uart.ioctl(UART_SET_CONN, devCon(port, CONN_NONE, 0, 0));        
+        disconnect();
+        connect();
     }
 
     /**
@@ -221,18 +267,9 @@ public class EV3UARTPort extends EV3IOPort implements UARTPort
      */
     protected void setOperatingMode(int mode)
     {
-        int serial = actual.getShort(0);
-        //setStatus(getStatus() & ~(UART_DATA_READY));
-        //System.out.println("Status is " + getStatus());
-        uart.ioctl(UART_SET_CONN, devCon(port, CONN_INPUT_UART, 0, mode));
-        if (actual.getShort(0) == serial)
-        {
-            //System.out.println("not in sync");
-            while (actual.getShort(0) == serial)
-                Thread.yield();
-            //System.out.println("sync");
-        }
-        //System.out.println("Status is " + getStatus());
+        cmd[0] = (byte)port;
+        cmd[2] = (byte)mode;
+        uart.ioctl(UART_SETMODE, cmd);
     }
 
     /**
@@ -273,10 +310,12 @@ public class EV3UARTPort extends EV3IOPort implements UARTPort
     /**
      * Clear the port changed flag for the current port.
      */
-    protected void clearPortChanged()
+    protected void clearPortChanged(UARTCTL uc)
     {
         //System.out.printf("Clear changed\n");
-        uart.ioctl(UART_CLEAR_CHANGED, devCon(port, CONN_INPUT_UART, 0, 0));
+        uc.Port = (byte)port;
+        uc.write();
+        uart.ioctl(UART_CLEAR_CHANGED, uc.getPointer());
         devStatus.put(port, (byte)(devStatus.get(port) & ~UART_PORT_CHANGED));        
     }
 
@@ -307,40 +346,40 @@ public class EV3UARTPort extends EV3IOPort implements UARTPort
     /**
      * Attempt to initialise the sensor ready for use.
      * @param mode initial operating mode
-     * @return true if the initialisation succeeded false if it failed
+     * @return -1 no uart, 0 failed to initialise, 1 sensor initialised
      */
-    protected boolean initSensor(int mode)
+    protected int initSensor(int mode)
     {
         byte status;
         int retryCnt = 0;
-        //System.out.println("Initial status is " + getStatus());
-        long base = System.currentTimeMillis();
-        if (ldm.getPortType(port) != CONN_INPUT_UART)
-            return false;
+        //System.out.println("Initial status is " + getStatus() + " type is " + ldm.getPortType(port));
+        //long base = System.currentTimeMillis();
+        UARTCTL uc = new UARTCTL();
         // now try and configure as a UART
         setOperatingMode(mode);
         status = waitNonZeroStatus(TIMEOUT);
         //System.out.println("Time is " + (System.currentTimeMillis() - base));
+        if ((status & UART_PORT_ERROR) != 0) return -1;
         while((status & UART_PORT_CHANGED) != 0 && retryCnt++ < INIT_RETRY)
         {
             // something change wait for it to become ready
-            if (ldm.getPortType(port) != CONN_INPUT_UART)
-                return false;
-            clearPortChanged();
+            clearPortChanged(uc);
             Delay.msDelay(INIT_DELAY);
             status = waitNonZeroStatus(TIMEOUT);
+            //System.out.println("Time2 is " + (System.currentTimeMillis() - base));
             if ((status & UART_DATA_READY) != 0 && (status & UART_PORT_CHANGED) == 0) 
             {
                 // device ready make sure it is now in the correct mode
                 setOperatingMode(mode);
                 status = waitNonZeroStatus(TIMEOUT);
+                //System.out.println("Time3 is " + (System.currentTimeMillis() - base));
             }
         }
         //System.out.println("Init complete retry " + retryCnt + " time " + (System.currentTimeMillis() - base));
         if ((status & UART_DATA_READY) != 0 && (status & UART_PORT_CHANGED) == 0)
-            return super.setMode(mode);
+            return 1;
         else
-            return false;
+            return 0;
     }
 
     /** {@inheritDoc}
@@ -348,19 +387,21 @@ public class EV3UARTPort extends EV3IOPort implements UARTPort
     @Override
     public boolean initialiseSensor(int mode)
     {
+        connect();
         for(int i = 0; i < OPEN_RETRY; i++)
         {
-            if (ldm.getPortType(port) != CONN_INPUT_UART)
-                return false;
             // initialise the sensor, if we have no mode data
             // then read it, otherwise use what we have
-            if (initSensor(mode) && (modeCnt > 0 || readModeInfo()))
+            int res = initSensor(mode);
+            if (res < 0) break;
+            if (res > 0 && (modeCnt > 0 || readModeInfo()))
             {
                 //System.out.println("reset cnt " + i);
-                return true;
+                return super.setMode(mode);
             }
             resetSensor();
         }
+        disconnect();
         return false;
     }
     
@@ -380,8 +421,6 @@ public class EV3UARTPort extends EV3IOPort implements UARTPort
     @Override
     public boolean open(int typ, int port, EV3Port ref)
     {
-        if (ldm.getPortType(port) != CONN_INPUT_UART)
-            return false;
         if (!super.open(typ, port, ref))
             return false;
         // clear mode data cache
@@ -394,7 +433,7 @@ public class EV3UARTPort extends EV3IOPort implements UARTPort
     @Override
     public void close()
     {
-        reset();
+        disconnect();
         super.close();
     }
     
@@ -478,8 +517,6 @@ public class EV3UARTPort extends EV3IOPort implements UARTPort
      */
     protected void checkSensor()
     {
-        if (ldm.getPortType(port) != CONN_INPUT_UART)
-            throw new DeviceException("Sensor unavailable");
         if ((getStatus() & UART_PORT_CHANGED) != 0)
         {
             //System.out.println("port " + port + " Changed ");
@@ -547,11 +584,36 @@ public class EV3UARTPort extends EV3IOPort implements UARTPort
     public String getModeName(int mode)
     {
         if (modeInfo[mode] != null)
-            return new String(modeInfo[mode].Name);
+        {
+            byte[] name = modeInfo[mode].Name;
+            // find the length of the possibly null terminated ascii string
+            int len = name.length;
+            for(int i = 0; i < name.length; i++)
+                if (name[i] == 0)
+                    len = i;
+            return new String(name, 0, len, Charset.forName("US-ASCII")).trim();
+        }
         else 
             return "Unknown";
     }
 
+
+    /**
+     * Write bytes to the sensor
+     * @param buffer bytes to be written
+     * @param offset offset to the start of the write
+     * @param len length of the write
+     * @return number of bytes written
+     */
+    public int write(byte[] buffer, int offset, int len) {
+        byte[] command = new byte[len + 1];
+        command[0] = (byte) port;
+        System.arraycopy(buffer, offset, command, 1, len);
+        int ret = uart.write(command, command.length);
+        if (ret > 0) ret--;
+        return ret;
+    }
+    
     /**
      * Return the current sensor reading to a string. 
      */
@@ -584,20 +646,75 @@ public class EV3UARTPort extends EV3IOPort implements UARTPort
     }
 
     /**
-     * Reset all of the ports
+     * Set the bit rate of the port when operating in RAW mode.
+     * @param bitRate The new bit rate
      */
-    public static void resetAll()
+    public void setBitRate(int bitRate)
     {
-        // reset everything
-        for(int i = 0; i < PORTS; i++)
-            devCon(i, CONN_NONE, 0, 0);
-        uart.ioctl(UART_SET_CONN, dc);        
+        UARTCONFIG uc = new UARTCONFIG();
+        uc.Port = port;
+        uc.BitRate = bitRate;
+        uc.write();
+        uart.ioctl(UART_SET_CONFIG, uc.getPointer());        
+    }
+
+    /**
+     * Read bytes from the uart port. If no bytes are available return 0.<p>
+     * Note: The port must have been set into RAW mode to use this method.
+     * @param buffer The buffer to store the read bytes
+     * @param offset The offset at which to start storing the bytes
+     * @param len The maximum number of bytes to read
+     * @return The actual number of bytes read
+     */
+    public int rawRead(byte[] buffer, int offset, int len)
+    {
+        if (rawInput == null)
+            rawInput = new byte[RAW_BUFFER_SIZE+2];
+        rawInput[0] = (byte)port;
+        if (len > RAW_BUFFER_SIZE)
+            len = RAW_BUFFER_SIZE;
+        rawInput[1] = (byte)len;
+        len = uart.ioctl(UART_RAW_READ, rawInput);
+        System.arraycopy(rawInput, 2, buffer, offset, len);
+        return len;
+    }
+
+    /**
+     * Attempt to write a series of bytes to the uart port. This call
+     * is non-blocking if there is no space in the write buffer a count
+     * of 0 is returned.<p>
+     * Note: The port must have been set into RAW mode before attempting
+     * to use the method.
+     * @param buffer The buffer containing the bytes to write
+     * @param offset The offset of the first byte
+     * @param len The number of bytes to attempt to write
+     * @return The actual number of bytes written
+     */
+    public int rawWrite(byte[] buffer, int offset, int len)
+    {
+        if (rawInput == null)
+            rawOutput = new byte[RAW_BUFFER_SIZE+2];
+        rawOutput[0] = (byte)port;
+        if (len > RAW_BUFFER_SIZE)
+            len = RAW_BUFFER_SIZE;
+        rawOutput[1] = (byte)len;
+        System.arraycopy(buffer, offset, rawOutput, 2, len);
+        len = uart.ioctl(UART_RAW_WRITE, rawOutput);
+        return len;
     }
     
+
+
     private static void initDeviceIO()
     {
-        uart = new NativeDevice("/dev/lms_uart");
-        pDev = uart.mmap(DEV_SIZE);
+        try {
+            uart = new NativeDevice("/dev/lms_uart");
+            pDev = uart.mmap(DEV_SIZE);
+        }
+        catch (IOError e)
+        {
+            throw new UnsupportedOperationException("Unable to access EV3 hardware. Is this an EV3?", e);
+        }
         devStatus = pDev.getByteBuffer(DEV_STATUS_OFF, PORTS);
         actual = pDev.getByteBuffer(DEV_ACTUAL_OFF, PORTS*2);
         raw = pDev.getByteBuffer(DEV_RAW_OFF, PORTS*DEV_RAW_SIZE1);

@@ -1,5 +1,6 @@
 package lejos.internal.ev3;
 
+import java.io.IOError;
 import java.nio.ByteBuffer;
 
 import lejos.hardware.port.AnalogPort;
@@ -25,8 +26,11 @@ public class EV3AnalogPort extends EV3IOPort implements AnalogPort
     protected static final int ANALOG_MOTOR_CUR_OFF = 26;
     protected static final int ANALOG_BAT_CUR_OFF = 28;
     protected static final int ANALOG_BAT_V_OFF = 30;
+    protected static final int ANALOG_ACTUAL_OFF = 4832;
     protected static final int ANALOG_INDCM_OFF = 5156;
     protected static final int ANALOG_INCONN_OFF = 5160;
+    protected static final int ANALOG_OUTDCM_OFF = 5164;
+    protected static final int ANALOG_OUTCONN_OFF = 5168;    
     protected static final int ANALOG_NXTCOL_OFF = 4856;
     protected static final int ANALOG_NXTCOL_SZ = 72;
     protected static final int ANALOG_NXTCOL_RAW_OFF = 54;
@@ -34,6 +38,8 @@ public class EV3AnalogPort extends EV3IOPort implements AnalogPort
     protected static Pointer pAnalog;
     protected static ByteBuffer inDcm;
     protected static ByteBuffer inConn;
+    protected static ByteBuffer outDcm;
+    protected static ByteBuffer outConn;
     protected static ByteBuffer shortVals;
     
     // NXT Color sensor stuff
@@ -47,29 +53,19 @@ public class EV3AnalogPort extends EV3IOPort implements AnalogPort
     protected int[] calLimits = new int[2];
     protected short[] rawValues = new short[BLANK_INDEX + 1];
     protected short[] values = new short[BLANK_INDEX + 1];
-    protected EV3DeviceManager ldm = EV3DeviceManager.getLocalDeviceManager();
 
     
     static {
         initDeviceIO();
     }
+    
     /** {@inheritDoc}
      */    
     @Override
     public boolean open(int typ, int port, EV3Port ref)
     {
-        int portType = ldm.getPortType(port);
-        if (portType == CONN_NXT_IIC || portType == CONN_INPUT_UART)
-            return false;
         if (!super.open(typ, port, ref))
             return false;
-        //System.out.println("Open port");
-        if (portType == CONN_NXT_COLOR)
-        {
-            //System.out.println("In color mode");
-            // Read NXT color sensor calibration data
-            getColorData();
-        }
         return true;
     }
 
@@ -94,7 +90,7 @@ public class EV3AnalogPort extends EV3IOPort implements AnalogPort
     
     protected void getColorData()
     {
-        setPinMode(TYPE_COLORNONE);
+        //setPinMode(TYPE_COLORFULL);
         Delay.msDelay(1000);
         int offset = ANALOG_NXTCOL_OFF + port*ANALOG_NXTCOL_SZ;
         for(int i = 0; i < calData.length; i++)
@@ -234,12 +230,18 @@ public class EV3AnalogPort extends EV3IOPort implements AnalogPort
             }            
         }
     }
+    
+    protected short getCurrentOffset()
+    {
+        return shortVals.getShort(ANALOG_ACTUAL_OFF + port*2);
+    }
 
     // The following methods provide compatibility with NXT sensors
     
     @Override
     public boolean setType(int type)
     {
+        boolean ret = true;
         switch(type)
         {
         case TYPE_NO_SENSOR:
@@ -271,13 +273,20 @@ public class EV3AnalogPort extends EV3IOPort implements AnalogPort
         case TYPE_COLORNONE:
             // Sensor type and pin modes are aligned
             //System.out.println("Set type :" + type);
-            setPinMode(type);
+            if (!setPinMode(type)) System.out.println("Failed to set mode");
+            if (type == TYPE_COLORFULL)
+                // Read NXT color sensor calibration data
+                getColorData();
             break;
 
         default:
-            return false;
+            ret = false;
         }
-        return true;
+        // wait for a new sample to avoid returning stale data
+        int curOffset = getCurrentOffset();
+        while (curOffset == getCurrentOffset())
+            Delay.msDelay(1);
+        return ret;
     }
 
     
@@ -338,7 +347,7 @@ public class EV3AnalogPort extends EV3IOPort implements AnalogPort
      * @param port
      * @return
      */
-    public static int getPortType(int port)
+    protected static int getPortType(int port)
     {
         if (port > PORTS || port < 0)
             return CONN_ERROR;
@@ -350,7 +359,7 @@ public class EV3AnalogPort extends EV3IOPort implements AnalogPort
      * @param port
      * @return
      */
-    public static int getAnalogSensorType(int port)
+    protected static int getAnalogSensorType(int port)
     {
         if (port > PORTS || port < 0)
             return CONN_ERROR;
@@ -358,12 +367,44 @@ public class EV3AnalogPort extends EV3IOPort implements AnalogPort
     }
         
     
+    /**
+     * get the type of the motor port
+     * @param port
+     * @return
+     */
+    protected static int getMotorPortType(int port)
+    {
+        if (port > MOTORS || port < 0)
+            return CONN_ERROR;
+        return outConn.get(port);
+    }
+
+    /**
+     * Get the type of analog sensor (if any) attached to the port
+     * @param port
+     * @return
+     */
+    protected static int getMotorType(int port)
+    {
+        if (port > MOTORS || port < 0)
+            return CONN_ERROR;
+        return outDcm.get(port);
+    }
+        
+    
     private static void initDeviceIO()
     {
-        dev = new NativeDevice("/dev/lms_analog"); 
-        pAnalog = dev.mmap(ANALOG_SIZE);
+        try {
+            dev = new NativeDevice("/dev/lms_analog"); 
+            pAnalog = dev.mmap(ANALOG_SIZE);
+        } catch (IOError e)
+        {
+            throw new UnsupportedOperationException("Unable to access EV3 hardware. Is this an EV3?", e);
+        }
         inDcm = pAnalog.getByteBuffer(ANALOG_INDCM_OFF, PORTS);
         inConn = pAnalog.getByteBuffer(ANALOG_INCONN_OFF, PORTS);
+        outDcm = pAnalog.getByteBuffer(ANALOG_OUTDCM_OFF, PORTS);
+        outConn = pAnalog.getByteBuffer(ANALOG_OUTCONN_OFF, PORTS);
         shortVals = pAnalog.getByteBuffer(0, ANALOG_SIZE);
     }
 }

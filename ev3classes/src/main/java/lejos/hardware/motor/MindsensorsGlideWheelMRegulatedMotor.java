@@ -24,6 +24,8 @@ public class MindsensorsGlideWheelMRegulatedMotor extends BaseRegulatedMotor
     static final float HOLD_I = 0f;
     static final float HOLD_D = 0f;
     static final int OFFSET = 0;
+    
+    private static final int MAX_SPEED = 405*360/60;
 
     /**
      * Use this constructor to assign a variable of type motor connected to a particular port.
@@ -32,7 +34,7 @@ public class MindsensorsGlideWheelMRegulatedMotor extends BaseRegulatedMotor
     public MindsensorsGlideWheelMRegulatedMotor(TachoMotorPort port)
     {
         super(port, null, EV3SensorConstants.TYPE_MINITACHO, MOVE_P, MOVE_I, MOVE_D,
-                HOLD_P, HOLD_I, HOLD_D, OFFSET);
+                HOLD_P, HOLD_I, HOLD_D, OFFSET, MAX_SPEED);
     }
     
     /**
@@ -42,7 +44,7 @@ public class MindsensorsGlideWheelMRegulatedMotor extends BaseRegulatedMotor
     public MindsensorsGlideWheelMRegulatedMotor(Port port)
     {
         super(port, null, EV3SensorConstants.TYPE_NEWTACHO, MOVE_P, MOVE_I, MOVE_D,
-                HOLD_P, HOLD_I, HOLD_D, OFFSET);
+                HOLD_P, HOLD_I, HOLD_D, OFFSET, MAX_SPEED);
     }
 
 

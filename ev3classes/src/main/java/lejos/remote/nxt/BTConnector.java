@@ -1,11 +1,11 @@
 package lejos.remote.nxt;
 
-import java.io.IOException;
 import java.util.Collection;
 
 import com.sun.jna.LastErrorException;
 
 import lejos.hardware.Bluetooth;
+import lejos.hardware.BluetoothException;
 import lejos.hardware.RemoteBTDevice;
 import lejos.internal.io.NativeHCI;
 import lejos.internal.io.NativeSocket;
@@ -61,7 +61,7 @@ public class BTConnector extends NXTCommConnector  {
 				
 				return new BTConnection(socket, mode);
 				
-			} catch (IOException e) {
+			} catch (BluetoothException e) {
 				System.err.println("Error getting remote devices: " + e);
 				return null;
 			}
@@ -69,7 +69,7 @@ public class BTConnector extends NXTCommConnector  {
 	}
 
 	@Override
-	public NXTConnection waitForConnection(int timeout, int mode) {
+	public BTConnection waitForConnection(int timeout, int mode) {
 		NativeSocket.SockAddr sa = new NativeSocket.SockAddr();
 		
 		socket.bind(sa, sa.size());

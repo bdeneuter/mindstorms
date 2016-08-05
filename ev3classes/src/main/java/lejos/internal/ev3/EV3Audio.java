@@ -2,6 +2,7 @@ package lejos.internal.ev3;
 
 
 import java.io.*;
+
 import lejos.hardware.Audio;
 import lejos.internal.io.NativeDevice;
 import lejos.internal.io.SystemSettings;
@@ -21,9 +22,10 @@ public class EV3Audio implements Audio
     private static final short RIFF_FMT_PCM = 0x0100;
     private static final short RIFF_FMT_1CHAN = 0x0100;
     private static final short RIFF_FMT_8BITS = 0x0800;
+    private static final short RIFF_FMT_16BITS = 0x1000;
     private static final int RIFF_DATA_SIG = 0x64617461;
     
-    private static final int PCM_BUFFER_SIZE = 250;
+    private static final int PCM_BUFFER_SIZE = 8*1024;
     
     public static final String VOL_SETTING = "lejos.volume";
     
@@ -35,12 +37,19 @@ public class EV3Audio implements Audio
     private static final byte OP_PLAY = 2;
     private static final byte OP_REPEAT = 3;
     private static final byte OP_SERVICE = 4;
-    private static final Audio singleton = new EV3Audio();
+    private static final EV3Audio singleton = new EV3Audio();
+    private int PCMSampleSize = 0;
+    private byte[] PCMBuffer;
+    
     /**
      * Static constructor to force loading of system settings
      */
     static {
         singleton.loadSettings();
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            @Override
+            public void run() {singleton.endPCMPlayback();}
+        });
     }
 
     private EV3Audio()
@@ -149,11 +158,125 @@ public class EV3Audio implements Audio
         val |= (d.readByte() & 0xff) << 24;
         return val;
     }
+
+    /**
+     * Prepare the sound device to play PCM samples. 
+     * @param sampleSize number of bits per sample
+     * @param sampleRate number of samples per second
+     * @param vol playback volume
+     */
+    public synchronized void startPCMPlayback(int sampleSize, int sampleRate, int vol)
+    {
+        if (sampleSize != 8 && sampleSize != 16)
+            throw new UnsupportedOperationException("Only 8bit and 16bit samples supported size is " + sampleSize);
+        if (sampleRate < 8000 || sampleRate > 48000)
+            throw new UnsupportedOperationException("Sample rate must be between 8KHz and 48KHz");
+        // save sample size for later
+        PCMSampleSize = sampleSize;
+        PCMBuffer = new byte[PCM_BUFFER_SIZE+1];
+        if (vol >= 0)
+            vol = (vol*masterVolume)/100;
+        else
+            vol = -vol;
+        // get ready to play, set the volume
+        byte [] buf = new byte[6];
+        buf[0] = OP_PLAY;
+        buf[1] = (byte)vol;
+        buf[2] = (byte) sampleRate;
+        buf[3] = (byte) (sampleRate >> 8);
+        buf[4] = (byte) (sampleRate >> 16);
+        buf[5] = (byte) (sampleRate >> 24);
+        dev.write(buf, 6);
+    }
+
+    /**
+     * Cease the playing of PCM samples
+     */
+    public synchronized void endPCMPlayback()
+    {
+        // are we playing?
+        if (PCMSampleSize == 0)
+            return;
+        PCMSampleSize = 0;         
+        byte [] buf = new byte[6];
+        buf[0] = OP_BREAK;
+        dev.write(buf, 1);
+        PCMBuffer = null;
+    }
+
+    /**
+     * Helper method write the PCM data to the sound device. It is assumed that the buffer contains
+     * extra space for the command byte.
+     * @param buffer
+     * @param cnt
+     */
+    private synchronized int writePCMBuffer(byte[] buf, int dataLen)
+    {
+        // check for playback aborted
+        if (PCMSampleSize == 0) return -1;
+        int offset = 0;
+        while (offset < dataLen)
+        {
+            buf[offset] = OP_SERVICE;
+            int len = dataLen - offset;
+            int written = dev.write(buf, offset, len + 1);
+            if (written < 0) return -1;
+            if (written < (len + 1))
+            {
+                Delay.msDelay(5);
+            }
+            offset += written;
+        }
+        return dataLen;
+    }
+    
+    public void writePCMSamples(byte[] data, int offset, int dataLength)
+    {
+        if (PCMSampleSize == 0)
+            throw new UnsupportedOperationException("Sample size not set did you call startPCMPlayback");
+        if (PCMSampleSize == 8)
+        {
+            // non native sample size need to convert
+            while (offset < dataLength)
+            {
+                int len = dataLength - offset;
+                if (len > PCM_BUFFER_SIZE/2)
+                   len = PCM_BUFFER_SIZE/2;
+                int outOffset = 1;
+                for(int i = 0; i < len; i++)
+                {
+                    // 8 bit data is unsigned with a 128 offset, need to convert to 16 bit signed
+                    int sample = (((int)data[i] & 0xff) - 128) << 8;
+                    PCMBuffer[outOffset++] = (byte)sample;
+                    PCMBuffer[outOffset++] = (byte)(sample >> 8);
+                }
+                if (writePCMBuffer(PCMBuffer, len*2) < 0) return;
+                offset += len;
+            }
+        }
+        else
+        {
+            // native format
+            while (offset < dataLength)
+            {
+                int len = dataLength - offset;
+                if (len > PCM_BUFFER_SIZE)
+                   len = PCM_BUFFER_SIZE;
+                System.arraycopy(data, offset, PCMBuffer, 1, len);
+                if (writePCMBuffer(PCMBuffer, len) < 0) return;
+                offset += len;
+            }
+            
+        }
+            
+    }
+    
+    
     /**
      * Play a wav file
-     * @param file the 8-bit PWM (WAV) sample file
+     * @param file the 8/16-bit PWM (WAV) sample file
      * @param vol the volume percentage 0 - 100
-     * @return The number of milliseconds the sample will play for or < 0 if
+     * @return 0 if the sample has been played or < 0 if
      *         there is an error.
      * @throws FileNotFoundException 
      */
@@ -166,10 +289,11 @@ public class EV3Audio implements Audio
         // Now check for a RIFF header
         FileInputStream f = null; 
         DataInputStream d = null;
+        boolean playing = false;
         try
         {
         	f = new FileInputStream(file);
-        	d = new DataInputStream(f);
+        	d = new DataInputStream(new BufferedInputStream(f));
 
             if (d.readInt() != RIFF_RIFF_SIG)
                 return -1;
@@ -180,7 +304,6 @@ public class EV3Audio implements Audio
                 return -2;
             if (d.readInt() != RIFF_FMT_SIG)
                 return -3;
-            int offset = 16;
             // Now check that the format is PCM, Mono 8 bits. Note that these
             // values are stored little endian.
             int sz = readLSBInt(d);
@@ -189,57 +312,60 @@ public class EV3Audio implements Audio
             if (d.readShort() != RIFF_FMT_1CHAN)
                 return -5;
             int sampleRate = readLSBInt(d);
+            if (sampleRate > 48000)
+                return -7;
             d.readInt();
             d.readShort();
-            if (d.readShort() != RIFF_FMT_8BITS)
+            short sampleSize = d.readShort();
+            if (sampleSize != RIFF_FMT_16BITS && sampleSize != RIFF_FMT_8BITS)
                 return -6;
+            playing = true;
             // Skip any data in this chunk after the 16 bytes above
             sz -= 16;
-            offset += 20 + sz;
             while (sz-- > 0)
                 d.readByte();
+            startPCMPlayback(sampleSize == RIFF_FMT_16BITS ? 16 : 8, sampleRate, vol);
+            playing = true;
             int dataLen;
-            // Skip optional chunks until we find a data sig (or we hit eof!)
+            // Skip/process chunks until we  hit eof!
             for(;;)
             {
                 int chunk = d.readInt();
                 dataLen = readLSBInt(d); 
-                offset += 8;
-                if (chunk == RIFF_DATA_SIG) break;
-                // Skip to the start of the next chunk
-                offset += dataLen;
-                while(dataLen-- > 0)
-                    d.readByte();
-            }
-            if (vol >= 0)
-                vol = (vol*masterVolume)/100;
-            else
-                vol = -vol;
-            byte []buf = new byte[PCM_BUFFER_SIZE*4+1];
-            // get ready to play, set the volume
-            buf[0] = OP_PLAY;
-            buf[1] = (byte)vol;
-            dev.write(buf, 2);
-            // now play the file
-            buf[1] = 0;
-            while((dataLen = d.read(buf, 1, buf.length - 1)) > 0)
-            {
-                // now make sure we write all of the data
-                offset = 0;
-                while (offset < dataLen)
+                if (chunk == RIFF_DATA_SIG)
                 {
-                    buf[offset] = OP_SERVICE;
-                    int len = dataLen - offset;
-                    if (len > PCM_BUFFER_SIZE) len = PCM_BUFFER_SIZE;
-                    int written = dev.write(buf, offset, len + 1);
-                    if (written == 0)
+                    int read;
+                    if (sampleSize == RIFF_FMT_16BITS)
                     {
-                        Delay.msDelay(1);
+                        // optimized case for native format
+                        while(dataLen > 0 && (read = d.read(PCMBuffer, 1, (PCMBuffer.length - 1 < dataLen ? PCMBuffer.length -1 : dataLen))) > 0)
+                        {
+                            writePCMBuffer(PCMBuffer, read);
+                            dataLen -= read;
+                        }
                     }
                     else
-                        offset += written;
+                    {
+                        // need to handle data conversion
+                        byte[] data = new byte[PCM_BUFFER_SIZE/2];
+                        while(dataLen > 0 && (read = d.read(data, 0, (data.length < dataLen ? data.length : dataLen))) > 0)
+                        {
+                            writePCMSamples(data, 0, read);
+                            dataLen -= read;
+                        }                        
+                    }
+                }
+                else
+                {
+                    // Skip to the start of the next chunk
+                    while(dataLen-- > 0)
+                        d.readByte();
                 }
             }
+        }
+        catch (EOFException e)
+        {
+            return 0;
         }
         catch (IOException e)
         {
@@ -252,13 +378,14 @@ public class EV3Audio implements Audio
                     d.close();
                 if (f != null)
                     f.close();
+                if (playing)
+                    endPCMPlayback();
             }
             catch (IOException e)
             {
                 return -1;
             }                
         }
-        return 0;
     }
 
 
@@ -281,43 +408,20 @@ public class EV3Audio implements Audio
      * 
      * @param data Buffer containing the samples
      * @param offset Offset of the first sample in the buffer
-     * @param len Number of samples to queue
-     * @param freq Sample rate
+     * @param len Number of bytes to queue
+     * @param sampleRate Sample rate
      * @param vol playback volume
-     * @return Number of samples actually queued
+     * @return Number of bytes actually queued
      */
-    public int playSample(byte [] data, int offset, int len, int freq, int vol)
+    public int playSample(byte [] data, int offset, int len, int sampleRate, int vol)
     {
-        if (vol >= 0)
-            vol = (vol*masterVolume)/100;
-        else
-            vol = -vol;
-        if (freq != 8000)
-            throw new UnsupportedOperationException("Sample rate must be 8KHz");
-        int inOffset = offset;
-        len += offset;
-        byte[] buf = new byte[PCM_BUFFER_SIZE+1];
-        // get ready to play, set the volume
-        buf[0] = OP_PLAY;
-        buf[1] = (byte)vol;
-        dev.write(buf, 2);
-        buf[1] = 0;
-        while (inOffset < len)
-        {
-            int writeLen = len - inOffset;
-            if (writeLen > PCM_BUFFER_SIZE)
-                writeLen = PCM_BUFFER_SIZE;
-            System.arraycopy(data, inOffset, buf, 1, writeLen);
-            buf[0] = OP_SERVICE;
-            int written = dev.write(buf, writeLen+1);
-            //System.out.println("Written " + written);;
-            if (written == 0)
-                Delay.msDelay(1);
-            else
-                inOffset += written;
-        }
-        return len - offset;
+        startPCMPlayback(8, sampleRate, vol);
+        writePCMSamples(data, offset, len);
+        endPCMPlayback();
+        return len;
     }
+        
+
 
     private int waitUntil(int t)
     {
