@@ -1,4 +1,0 @@
-dependencies {
-  compile 'com.github.bdeneuter:dbus-java:2.7'
-  compile 'net.java.dev.jna:jna:3.2.7'
-}
