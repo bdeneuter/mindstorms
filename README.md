@@ -4,6 +4,8 @@ This project helps you to install a Java8 JRE on the Lego Mindstorms. It also he
 
 You can find this information also on [the EV3 wiki](https://sourceforge.net/p/lejos/wiki/Installing%20leJOS/) on the LeJOS website.
 
+[Java on the EV3 brick](https://plus.google.com/+BartDeNeuter/posts/X8vqeBSyWmy)
+
 ## Install LeJOS on the EV3 brick
 
 ### Prerequisites
