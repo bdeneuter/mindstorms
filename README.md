@@ -36,6 +36,11 @@ You can find this information also on [the EV3 wiki](https://sourceforge.net/p/l
 
 ## TODO: explain setup gradle
 
+I'm working on a gradle plugin. The advantage of using a build tool like gradle are:
+* Dependency management: A lot of Java libraries exist today and are published in repositories like [Maven Central](http://search.maven.org/) (ex.: guava, commons-lang3, ...). With gradle they are easy to add to your project.
+* You can use your preferred IDE. It is a normal java project.
+* Deploy your code to the EV3 brick from your IDE or from the terminal
+
 ## TODO: Explain RX Java decorators around the LeJOS EV3 sensor API
 
 Thanks to it's sensors, the EV3 is by nature event driven and therefor very suitable for toying around with reactive programming.
