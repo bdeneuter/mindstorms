@@ -1,13 +1,6 @@
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        classpath 'com.github.bdeneuter:mindstorms-plugin:1.1.0'
-    }
+plugins {
+    id "com.github.bdeneuter.mindstorms.ev3" version "1.1.1"
 }
-
-apply plugin: 'com.github.bdeneuter.mindstorms.ev3'
 
 dependencies {
     compile 'com.google.guava:guava:19.0'
