@@ -1,5 +1,5 @@
 plugins {
-    id "com.github.bdeneuter.mindstorms.ev3" version "1.1.1"
+    id "com.github.bdeneuter.mindstorms.ev3" version "1.2.0"
 }
 
 dependencies {
